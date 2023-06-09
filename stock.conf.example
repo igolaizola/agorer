@@ -1,0 +1,21 @@
+# General parameters
+log-dir logs
+input http://localhost:1337
+input-type agora
+output-type sinli
+# Agora parameters
+agora-token todostuslibros
+# ISBN parameters
+isbn-dir data
+# Mail parameters
+mail-dry true
+mail-host mail.host.com
+mail-port 587
+mail-user username@host.com
+mail-pass my-secret-password
+# SINLI parameters
+sinli-source-email username@host.com
+sinli-source-id L0000001
+sinli-destination-email sinli@cegal.es
+sinli-destination-id LIB00022
+sinli-client-name AWESOME BOOK STORE

@@ -1,0 +1,14 @@
+builds:
+  - id: agorer
+    binary: agorer
+    main: ./cmd/agorer
+    goarch:
+      - amd64
+      - arm64
+      - arm
+archives:
+  - id: agorer
+    builds:
+      - agorer
+    format: zip
+    name_template: 'agorer_{{ .Version }}_{{- if eq .Os "darwin" }}macos{{- else }}{{ .Os }}{{ end }}_{{ .Arch }}'

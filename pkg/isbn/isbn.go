@@ -120,12 +120,13 @@ func (c *Client) Hyphenate(ctx context.Context, raw string, msgs ...string) (str
 	}()
 
 	// Hyphenate
-	isbnHyphenated, err := gobHyphenate(ctx, raw)
+	log.Println("isbn: hyphenating", raw)
+	isbnHyphenated, err := ttlHyphenate(ctx, raw)
 	if err != nil {
-		gobErr := err
-		isbnHyphenated, err = ttlHyphenate(ctx, raw)
+		ttlErr := err
+		isbnHyphenated, err = gobHyphenate(ctx, raw)
 		if err != nil {
-			err = fmt.Errorf("isbn: %w, %w", gobErr, err)
+			err = fmt.Errorf("isbn: %w, %w", ttlErr, err)
 		}
 	}
 

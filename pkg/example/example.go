@@ -54,7 +54,7 @@ func Run(ctx context.Context, c *Config) error {
 	s := agorer.NewStore(ctx, &master, isbnClient)
 
 	stockDate := time.Now()
-	stockItems, err := agorer.StockItems(ctx, s)
+	stockItems, _, err := agorer.StockItems(ctx, s)
 	if err != nil {
 		return fmt.Errorf("couldn't generate stock items: %w", err)
 	}

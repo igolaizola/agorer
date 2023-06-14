@@ -143,9 +143,22 @@ func Stock(ctx context.Context, c *StockConfig) error {
 		// Create store using master data and isbn client
 		s := NewStore(ctx, master, isbnClient)
 
-		stockItems, err = StockItems(ctx, s)
+		var conflicts []Conflict
+		stockItems, conflicts, err = StockItems(ctx, s)
 		if err != nil {
 			return fmt.Errorf("couldn't generate stock: %w", err)
+		}
+
+		// Write conflicts to file
+		if len(conflicts) > 0 {
+			b, err := json.MarshalIndent(conflicts, "", "  ")
+			if err != nil {
+				return fmt.Errorf("couldn't marshal conflicts: %w", err)
+			}
+			f := filepath.Join(c.LogDir, fmt.Sprintf("conflicts_%s.json", time.Now().Format("20060102_150405")))
+			if err := os.WriteFile(f, b, 0644); err != nil {
+				return fmt.Errorf("couldn't write file %s: %w", f, err)
+			}
 		}
 	} else {
 		// Read stock from json file
@@ -248,12 +261,17 @@ type StockItem struct {
 	PriceWithoutVAT float32 `json:"price_without_vat"`
 }
 
-func StockItems(ctx context.Context, s *Store) ([]StockItem, error) {
+type Conflict struct {
+	ISBN  string
+	Names []string
+}
+
+func StockItems(ctx context.Context, s *Store) ([]StockItem, []Conflict, error) {
 	var items []StockItem
 	for id, qty := range s.Quantity {
 		select {
 		case <-ctx.Done():
-			return nil, ctx.Err()
+			return nil, nil, ctx.Err()
 		default:
 		}
 		p := s.Products[id]
@@ -264,26 +282,26 @@ func StockItems(ctx context.Context, s *Store) ([]StockItem, error) {
 			continue
 		}
 		if len(p.Prices) == 0 {
-			log.Println("😭 no price for", p.ID, p.Name)
+			log.Println("❌ no price for", p.ID, p.Name)
 			continue
 		}
 		if len(p.Prices) > 1 {
-			log.Println("😭 more than one price for", p.ID, p.Name)
+			log.Println("❌ more than one price for", p.ID, p.Name)
 			continue
 		}
 		priceData := p.Prices[0]
 		if priceData.Price == 0 {
-			log.Println("😭 price is 0 for", p.ID, p.Name)
+			log.Println("❌ price is 0 for", p.ID, p.Name)
 			continue
 		}
 		priceList, ok := s.PriceLists[priceData.PriceListID]
 		if !ok {
-			log.Println("😭 price list not found for", p.ID, p.Name)
+			log.Println("❌ price list not found for", p.ID, p.Name)
 			continue
 		}
 		vat, ok := s.Vats[p.VatID]
 		if !ok {
-			log.Println("😭 vat not found for", p.ID, p.Name)
+			log.Println("❌ vat not found for", p.ID, p.Name)
 			continue
 		}
 		isbnCode := s.ISBNs[p.ID]
@@ -307,11 +325,41 @@ func StockItems(ctx context.Context, s *Store) ([]StockItem, error) {
 			PriceWithVAT:    priceWithVAT,
 		})
 	}
+
+	// Group items by ISBN
+	groups := make(map[string][]StockItem)
+	for _, item := range items {
+		groups[item.ISBN] = append(groups[item.ISBN], item)
+	}
+
+	// Find conflicts
+	var conflicts []Conflict
+	var filtered []StockItem
+	for key, group := range groups {
+		if len(group) == 1 {
+			filtered = append(filtered, group[0])
+			continue
+		}
+		var names []string
+		for _, item := range group {
+			names = append(names, item.Name)
+		}
+		sort.Strings(names)
+		conflicts = append(conflicts, Conflict{
+			ISBN:  key,
+			Names: names,
+		})
+	}
+
 	// Sort items by ISBN to be deterministic
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].ISBN < items[j].ISBN
+	sort.Slice(filtered, func(i, j int) bool {
+		return filtered[i].ISBN < filtered[j].ISBN
 	})
-	return items, nil
+	sort.Slice(conflicts, func(i, j int) bool {
+		return conflicts[i].ISBN < conflicts[j].ISBN
+	})
+
+	return filtered, conflicts, nil
 }
 
 func OrderDetails(ctx context.Context, s *Store, inv *agora.Invoice) ([]sinli.OrderDetail, error) {
@@ -331,7 +379,7 @@ func OrderDetails(ctx context.Context, s *Store, inv *agora.Invoice) ([]sinli.Or
 			}
 			p, ok := s.Products[l.ProductID]
 			if !ok {
-				log.Println("😭 product not found for", l.ProductID)
+				log.Println("❌ product not found for", l.ProductID)
 				continue
 			}
 			barCode := p.Barcode()
@@ -375,7 +423,7 @@ func ReturnDetails(ctx context.Context, s *Store, inv *agora.Invoice) ([]sinli.R
 			}
 			p, ok := s.Products[l.ProductID]
 			if !ok {
-				log.Println("😭 product not found for", l.ProductID)
+				log.Println("❌ product not found for", l.ProductID)
 				continue
 			}
 			barCode := p.Barcode()
@@ -447,7 +495,7 @@ func NewStore(ctx context.Context, master *agora.Master, isbnCli *isbn.Client) *
 		isbnCode, err := isbnCli.Hyphenate(ctx, barcode, pr.Name)
 		if err != nil {
 			if !errors.Is(err, isbn.ErrNotFound) {
-				log.Println("😭 couldn't get isbn for", pr.Name, barcode, err)
+				log.Println("❌ couldn't get isbn for", pr.Name, barcode, err)
 			}
 			continue
 		}

@@ -87,7 +87,7 @@ func newStockCommand() *ffcli.Command {
 	fs := flag.NewFlagSet(cmd, flag.ExitOnError)
 	_ = fs.String("config", "", "config file (optional)")
 
-	var cfg agorer.StockConfig
+	var cfg agorer.Config
 	fs.BoolVar(&cfg.Debug, "debug", false, "debug mode")
 	fs.StringVar(&cfg.LogDir, "log-dir", "logs", "output directory")
 	fs.StringVar(&cfg.Input, "input", "", "input file or URL")

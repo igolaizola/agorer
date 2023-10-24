@@ -15,18 +15,33 @@ Or you can download the binary from the [releases](https://github.com/igolaizola
 ## 🕹️ Usage
 
 Create a configuration file.
-You can use `stock.conf.example` as a template.
+You can use `example.conf` as a template.
+
 Use the help command to see the available options:
 
 ```bash
+agorer --help
 agorer stock --help
+agorer sales --help
 ```
 
-Then run this command to obtain the stock data from Agora Retail and send it by email in SINLI format:
+### stock
+
+Run this command to obtain the stock data from Agora Retail and send it by email in SINLI format:
 
 ```bash
 agorer stock --config stock.conf
 ```
+
+### sales
+
+Run this command to obtain sales data of a given day from Agora Retail and send it by email in SINLI format:
+
+```bash
+agorer stock --config sales.conf --day 2023-02-28
+```
+
+If `day` is not specified, the current day is used.
 
 ## 📚 Resources
 

@@ -21,3 +21,4 @@ bin
 *.conf
 logs/
 data/*
+!example.conf

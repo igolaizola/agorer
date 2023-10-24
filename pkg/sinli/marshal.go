@@ -20,19 +20,31 @@ type sinliValue struct {
 
 // Marshal converts a struct into a "sinli" formatted string.
 func Marshal(v interface{}) ([]byte, error) {
+	output, err := marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	return encode(output)
+}
+
+func marshal(v interface{}) (string, error) {
 	value := reflect.ValueOf(v)
 
 	if value.Kind() == reflect.Slice || value.Kind() == reflect.Array {
 		// Loop through the slice and marshal each element
 		var output string
 		for i := 0; i < value.Len(); i++ {
-			marshaled, err := Marshal(value.Index(i).Interface())
+			marshaled, err := marshal(value.Index(i).Interface())
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 			output += string(marshaled)
 		}
-		return encode(output)
+		// Append a newline to the output if it doesn't already have one
+		if !strings.HasSuffix(output, "\r\n") {
+			output += "\r\n"
+		}
+		return output, nil
 	}
 
 	// If the value is a pointer, dereference it
@@ -42,7 +54,7 @@ func Marshal(v interface{}) ([]byte, error) {
 
 	// Ensure that the provided value is a struct
 	if value.Kind() != reflect.Struct {
-		return nil, errors.New("sinli: value must be a struct")
+		return "", errors.New("sinli: value must be a struct")
 	}
 
 	values := map[int]sinliValue{}
@@ -59,36 +71,36 @@ func Marshal(v interface{}) ([]byte, error) {
 			// Split the part into its key and value
 			kv := strings.Split(part, "=")
 			if len(kv) != 2 {
-				return nil, errors.New("sinli: invalid tag format")
+				return "", errors.New("sinli: invalid tag format")
 			}
 			k, v := strings.TrimSpace(kv[0]), strings.TrimSpace(kv[1])
 			switch k {
 			case "order":
 				candidate, err := strconv.Atoi(v)
 				if err != nil {
-					return nil, fmt.Errorf("sinli: invalid order '%s'", v)
+					return "", fmt.Errorf("sinli: invalid order '%s'", v)
 				}
 				order = candidate
 			case "length":
 				candidate, err := strconv.Atoi(v)
 				if err != nil {
-					return nil, fmt.Errorf("sinli: invalid length '%s'", v)
+					return "", fmt.Errorf("sinli: invalid length '%s'", v)
 				}
 				length = candidate
 			case "fixed":
 				fixed = v
 			default:
-				return nil, fmt.Errorf("sinli: invalid tag key '%s'", k)
+				return "", fmt.Errorf("sinli: invalid tag key '%s'", k)
 			}
 		}
 		if order == 0 {
-			return nil, errors.New("sinli: order must be specified")
+			return "", errors.New("sinli: order must be specified")
 		}
 		if length == 0 && !isArray(field) && !isSinli(field) {
-			return nil, fmt.Errorf("sinli: length must be specified for %v", field)
+			return "", fmt.Errorf("sinli: length must be specified for %v", field)
 		}
 		if _, ok := values[order]; ok {
-			return nil, fmt.Errorf("sinli: duplicate order '%d'", order)
+			return "", fmt.Errorf("sinli: duplicate order '%d'", order)
 		}
 		if fixed != "" {
 			field = reflect.ValueOf(fixed)
@@ -101,15 +113,20 @@ func Marshal(v interface{}) ([]byte, error) {
 	}
 	var output string
 	sort.Ints(keys)
-	for _, key := range keys {
+	for i, key := range keys {
 		kind := values[key].value.Kind()
 		value := values[key].value
 		length := values[key].length
 		switch {
 		case kind == reflect.Slice, kind == reflect.Array, isSinli(value):
-			marshaled, err := Marshal(value.Interface())
+			// Append a newline to the output if it doesn't already have one
+			// and the value isn't the first element.
+			if i > 0 && !strings.HasSuffix(output, "\r\n") {
+				output += "\r\n"
+			}
+			marshaled, err := marshal(value.Interface())
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 			output += string(marshaled)
 		default:
@@ -120,7 +137,7 @@ func Marshal(v interface{}) ([]byte, error) {
 	if !strings.HasSuffix(output, "\r\n") {
 		output += "\r\n"
 	}
-	return encode(output)
+	return output, nil
 }
 
 func encode(v string) ([]byte, error) {

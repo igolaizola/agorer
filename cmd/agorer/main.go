@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"github.com/igolaizola/agorer"
 	"github.com/igolaizola/agorer/pkg/agora"
@@ -47,6 +48,7 @@ func newCommand() *ffcli.Command {
 		Subcommands: []*ffcli.Command{
 			newVersionCommand(),
 			newStockCommand(),
+			newSalesCommand(),
 			newMockServeCommand(),
 			newExampleCommand(),
 			newMailCommand(),
@@ -126,6 +128,61 @@ func newStockCommand() *ffcli.Command {
 		FlagSet:   fs,
 		Exec: func(ctx context.Context, args []string) error {
 			return agorer.Stock(ctx, &cfg)
+		},
+	}
+}
+
+func newSalesCommand() *ffcli.Command {
+	cmd := "sales"
+	fs := flag.NewFlagSet(cmd, flag.ExitOnError)
+	_ = fs.String("config", "", "config file (optional)")
+
+	var day string
+	fs.StringVar(&day, "day", time.Now().UTC().Format("2006-01-02"), "day to process")
+
+	var cfg agorer.Config
+	fs.BoolVar(&cfg.Debug, "debug", false, "debug mode")
+	fs.StringVar(&cfg.LogDir, "log-dir", "logs", "output directory")
+	fs.StringVar(&cfg.Input, "input", "", "input file or URL")
+	fs.StringVar(&cfg.InputType, "input-type", "", "input type (json, agora, agora-json)")
+	fs.StringVar(&cfg.Output, "output", "", "output file")
+	fs.StringVar(&cfg.OutputType, "output-type", "", "output type (json, sinli)")
+
+	// Agora parameters
+	fs.StringVar(&cfg.AgoraToken, "agora-token", "", "agora token")
+	// ISBN parameters
+	fs.StringVar(&cfg.ISBNDir, "isbn-dir", "data", "isbn directory")
+
+	// Mail parameters
+	fs.BoolVar(&cfg.Mail.Dry, "mail-dry", false, "dry run, don't send mail")
+	fs.StringVar(&cfg.Mail.Host, "mail-host", "", "mail smtp host")
+	fs.IntVar(&cfg.Mail.Port, "mail-port", 0, "mail smtp port")
+	fs.StringVar(&cfg.Mail.Username, "mail-user", "", "mail smtp username")
+	fs.StringVar(&cfg.Mail.Password, "mail-pass", "", "mail smtp password")
+
+	// SINLI parameters
+	fs.StringVar(&cfg.SINLISourceEmail, "sinli-source-email", "", "sinli source email")
+	fs.StringVar(&cfg.SINLISourceID, "sinli-source-id", "", "sinli source id")
+	fs.StringVar(&cfg.SINLIDestinationEmail, "sinli-destination-email", "", "sinli destination email")
+	fs.StringVar(&cfg.SINLIDestinationID, "sinli-destination-id", "", "sinli destination id")
+	fs.StringVar(&cfg.SINLIClientName, "sinli-client-name", "", "sinli client name")
+
+	return &ffcli.Command{
+		Name:       cmd,
+		ShortUsage: fmt.Sprintf("agorer %s [flags] <key> <value data...>", cmd),
+		Options: []ff.Option{
+			ff.WithConfigFileFlag("config"),
+			ff.WithConfigFileParser(ff.PlainParser),
+			ff.WithEnvVarPrefix("AGORER"),
+		},
+		ShortHelp: fmt.Sprintf("%s agorer command", cmd),
+		FlagSet:   fs,
+		Exec: func(ctx context.Context, args []string) error {
+			d, err := time.Parse("2006-01-02", day)
+			if err != nil {
+				return fmt.Errorf("couldn't parse day: %w", err)
+			}
+			return agorer.Sales(ctx, &cfg, d)
 		},
 	}
 }

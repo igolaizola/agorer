@@ -61,6 +61,7 @@ const (
 	FileVersionStock  FileVersion = 2
 	FileVersionOrder  FileVersion = 7
 	FileVersionReturn FileVersion = 2
+	FileVersionSale   FileVersion = 3
 )
 
 type FileType string
@@ -69,6 +70,7 @@ const (
 	FileTypeStock  FileType = "CEGALD"
 	FileTypeOrder  FileType = "PEDIDO"
 	FileTypeReturn FileType = "DEVOLU"
+	FileTypeSale   FileType = "CEGALV"
 )
 
 // Order is a sinli order. Code: `PEDIDO`
@@ -223,7 +225,7 @@ type StockHeader struct {
 	_          struct{}  `sinli:"order=1,length=1,fixed=C"`
 	ClientName string    `sinli:"order=2,length=40"`
 	StockDate  time.Time `sinli:"order=3,length=8"`
-	StockCoin  Coin      `sinli:"order=4,length=1"`
+	StockCoin  Coin      `sinli:"order=4,length=3"`
 }
 
 // Coin as in ISO 4217
@@ -234,6 +236,38 @@ const (
 )
 
 type StockDetail struct {
+	_               struct{} `sinli:"order=1,length=1,fixed=D"`
+	ISBN            string   `sinli:"order=2,length=17"`
+	Quantity        int      `sinli:"order=3,length=6"`
+	PriceWithoutVAT float32  `sinli:"order=4,length=10"`
+}
+
+// Sale is a sinli sale. Code: `CEGALV`
+type Sale struct {
+	IdentificationHeader IdentificationHeader `sinli:"order=1"`
+	Identification       Identification       `sinli:"order=2"`
+	Header               SaleHeader           `sinli:"order=3"`
+	Tickets              []SaleTicket         `sinli:"order=4"`
+}
+
+type SaleHeader struct {
+	_            struct{}  `sinli:"order=1,length=1,fixed=C"`
+	ClientName   string    `sinli:"order=2,length=40"`
+	DispatchDate time.Time `sinli:"order=3,length=8"`
+	Coin         Coin      `sinli:"order=4,length=3"`
+}
+
+type SaleTicket struct {
+	_ struct{} `sinli:"order=1,length=1,fixed=T"`
+	// Leave unset for generic client
+	ClientNumber int          `sinli:"order=2,length=10"`
+	SaleDate     time.Time    `sinli:"order=3,length=8"`
+	SaleNumber   string       `sinli:"order=4,length=10"`
+	NetAmount    float32      `sinli:"order=5,length=10"`
+	Details      []SaleDetail `sinli:"order=6"`
+}
+
+type SaleDetail struct {
 	_               struct{} `sinli:"order=1,length=1,fixed=D"`
 	ISBN            string   `sinli:"order=2,length=17"`
 	Quantity        int      `sinli:"order=3,length=6"`

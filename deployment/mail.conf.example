@@ -1,0 +1,9 @@
+mail-host mail.bar.foo
+mail-port 587
+mail-user sinli@bar.foo
+mail-pass mysecretpassword
+sinli-client-name MY AWESOME BOOKSTORE
+sinli-destination-email sinli@cegal.es
+sinli-destination-id LIB00022
+sinli-source-email sinli@bar.foo
+sinli-source-id L0001234

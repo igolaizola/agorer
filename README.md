@@ -43,6 +43,10 @@ agorer stock --config sales.conf --day 2023-02-28
 
 If `day` is not specified, the current day is used.
 
+## 🚀 Deployment
+
+See [deployment](deployment/README.md) folder for a deployment template.
+
 ## 📚 Resources
 
  - [SINLI documentation](http://www.fande.es/sinli_indicedocumentos.html)

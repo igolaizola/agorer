@@ -1,0 +1,29 @@
+name: cron
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '45 21 * * *'
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run agorer sinli
+        env:
+          AGORER_INPUT_TYPE: json
+          AGORER_OUTPUT_TYPE: sinli
+          AGORER_MAIL_HOST: ${{ vars.MAIL_HOST }}
+          AGORER_MAIL_PORT: ${{ vars.MAIL_PORT }}
+          AGORER_MAIL_USER: ${{ vars.MAIL_USER }}
+          AGORER_MAIL_PASS: ${{ secrets.MAIL_PASS }}
+          AGORER_SINLI_SOURCE_EMAIL: ${{ vars.SINLI_SOURCE_EMAIL }}
+          AGORER_SINLI_SOURCE_ID: ${{ vars.SINLI_SOURCE_ID }}
+          AGORER_SINLI_DESTINATION_EMAIL: ${{ vars.SINLI_DESTINATION_EMAIL }}
+          AGORER_SINLI_DESTINATION_ID: ${{ vars.SINLI_DESTINATION_ID }}
+          AGORER_SINLI_CLIENT_NAME: ${{ vars.SINLI_CLIENT_NAME }}
+        run: |
+          ./agorer stock --input data/stock.json
+          [ -f data/sales/$(date +%Y-%m-%d).json ] || echo '[]' > data/sales/$(date +%Y-%m-%d).json
+          ./agorer sales --input data/sales

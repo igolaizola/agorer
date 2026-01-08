@@ -56,7 +56,7 @@ func New(dataFile, errFile string) (*Client, error) {
 		dataCache: dataCache,
 		errCache:  errCache,
 		client: &http.Client{
-			Timeout: 10 * time.Second,
+			Timeout: 1 * time.Minute,
 		},
 	}, nil
 }
@@ -159,7 +159,7 @@ func ttlHyphenate(ctx context.Context, raw string) (string, error) {
 
 	// Create client that doesn't follow redirects
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: 1 * time.Minute,
 		CheckRedirect: func(*http.Request, []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
@@ -212,7 +212,7 @@ func gobHyphenate(ctx context.Context, raw string) (string, error) {
 	// Create an HTTP client with the custom transport
 	client := &http.Client{
 		Transport: tr,
-		Timeout:   5 * time.Second,
+		Timeout:   1 * time.Minute,
 		Jar:       jar,
 	}
 

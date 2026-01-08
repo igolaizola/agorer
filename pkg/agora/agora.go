@@ -25,7 +25,7 @@ func New(host, token string, logDir string) *client {
 		host:  host,
 		token: token,
 		client: &http.Client{
-			Timeout: 10 * time.Second,
+			Timeout: 1 * time.Minute,
 		},
 		logDir: logDir,
 	}
